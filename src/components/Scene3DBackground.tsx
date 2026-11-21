@@ -149,6 +149,7 @@ const Scene3DBackground = () => {
   const parallax = useRef({ x: 0, y: 0 });
   const parallaxTarget = useRef({ x: 0, y: 0 });
   const [mount, setMount] = useState(false);
+  const [heroVisible, setHeroVisible] = useState(true);
   const [maxDpr, setMaxDpr] = useState(1);
   const [layout, setLayout] = useState<SceneLayout & { maskStrength: number; opacity: number }>({
     cameraZ: 5,
@@ -190,6 +191,34 @@ const Scene3DBackground = () => {
       else clearTimeout(id);
     };
   }, [reduce]);
+
+  // Stop WebGL frame work once the welcome section has left the viewport.
+  useEffect(() => {
+    const hero = document.querySelector('main > section');
+    if (!hero || !('IntersectionObserver' in window)) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setHeroVisible(entry?.isIntersecting ?? false);
+    });
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
+
+  // Keep scene movement in step with native scrolling instead of snapping.
+  useEffect(() => {
+    const updateScroll = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      scroll.current = max > 0 ? window.scrollY / max : 0;
+    };
+
+    updateScroll();
+    window.addEventListener('scroll', updateScroll, { passive: true });
+    window.addEventListener('resize', updateScroll);
+    return () => {
+      window.removeEventListener('scroll', updateScroll);
+      window.removeEventListener('resize', updateScroll);
+    };
+  }, [scroll]);
 
   // Automatic layout guard: re-measure on resize and when hero copy changes size.
   useEffect(() => {
@@ -295,6 +324,7 @@ const Scene3DBackground = () => {
           layout={layout}
           theme={sceneTheme}
           maxDpr={maxDpr}
+          heroVisible={heroVisible}
         />
       </Suspense>
     </div>

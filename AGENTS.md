@@ -1,0 +1,1 @@
+- Keep decorative 3D work lazy-loaded, low-resolution, and paused outside the welcome section so it does not burden long-page scrolling.

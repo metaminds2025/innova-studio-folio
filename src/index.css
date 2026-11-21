@@ -222,10 +222,7 @@
 
   html {
     scroll-behavior: smooth;
-    /* Modern scroll-snap for parallax-like section flow (desktop only). */
-    @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
-      scroll-snap-type: y proximity;
-    }
+    overflow-x: clip;
   }
 
   body {
@@ -235,11 +232,6 @@
     min-height: 100vh;
     /* Prevent horizontal overflow on mobile from decorative absolute elements */
     overflow-x: hidden;
-  }
-
-  section {
-    scroll-snap-align: start;
-    scroll-snap-stop: normal;
   }
 
   h1, h2, h3, h4, h5, h6 {

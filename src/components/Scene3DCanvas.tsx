@@ -1,5 +1,5 @@
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, Environment, MeshDistortMaterial, Html } from '@react-three/drei';
+import { Html } from '@react-three/drei';
 import { Suspense, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 
@@ -170,7 +170,7 @@ const Laptop = ({
   );
 };
 
-const FloatingCube = ({
+const Crystal = ({
   position,
   color,
   scale = 0.35,
@@ -200,18 +200,14 @@ const FloatingCube = ({
     ref.current.position.x = position[0] + px * depth * 1.2;
   });
   return (
-    <Float speed={2} rotationIntensity={0.6} floatIntensity={1.2}>
-      <mesh ref={ref} position={position} scale={scale}>
-        <icosahedronGeometry args={[1, 0]} />
-        <MeshDistortMaterial
-          color={color}
-          distort={0.35}
-          speed={2}
-          metalness={theme.metalness}
-          roughness={theme.roughness}
-        />
-      </mesh>
-    </Float>
+    <mesh ref={ref} position={position} scale={scale}>
+      <icosahedronGeometry args={[1, 0]} />
+      <meshStandardMaterial
+        color={color}
+        metalness={theme.metalness}
+        roughness={theme.roughness}
+      />
+    </mesh>
   );
 };
 
@@ -274,64 +270,11 @@ const Scene = ({
       <group ref={group} position={[layout.sceneX, layout.sceneY, 0]} scale={layout.scale}>
         <Laptop scroll={scroll} parallax={parallax} theme={theme} />
 
-        <FloatingCube position={[-3 * spread, 1.5, -1]} color={c[0]} scroll={scroll} parallax={parallax} depth={1.2} theme={theme} />
-        <FloatingCube position={[3.2 * spread, 1.8, -1.5]} color={c[1]} scale={0.28} scroll={scroll} parallax={parallax} depth={1.4} theme={theme} />
-        <FloatingCube position={[-2.8 * spread, -1.5, 0.5]} color={c[2]} scale={0.22} scroll={scroll} parallax={parallax} depth={0.9} theme={theme} />
-        <FloatingCube position={[3 * spread, -1.2, 0]} color={c[3]} scale={0.3} scroll={scroll} parallax={parallax} depth={1.0} theme={theme} />
-        <FloatingCube position={[0, 2.5, -2]} color={c[4]} scale={0.2} scroll={scroll} parallax={parallax} depth={0.7} theme={theme} />
+        <Crystal position={[-3 * spread, 1.5, -1]} color={c[0]} scroll={scroll} parallax={parallax} depth={1.2} theme={theme} />
+        <Crystal position={[3.2 * spread, 1.8, -1.5]} color={c[1]} scale={0.28} scroll={scroll} parallax={parallax} depth={1.4} theme={theme} />
       </group>
-
-      <Environment preset={theme.environment} />
     </>
   );
-};
-
-// Ease scroll progress toward the nearest section snap point.
-const SmoothScroll = ({ scroll }: { scroll: React.MutableRefObject<number> }) => {
-  const target = useRef(0);
-
-  useEffect(() => {
-    const getSnapPoints = () => {
-      const ids = ['about', 'skills', 'projects', 'blog', 'achievements', 'experience', 'contact'];
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      if (max <= 0) return [0];
-      const pts = [0];
-      ids.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) pts.push(Math.min(1, Math.max(0, el.offsetTop / max)));
-      });
-      pts.push(1);
-      return pts;
-    };
-
-    let snaps = getSnapPoints();
-    const refresh = () => { snaps = getSnapPoints(); };
-    const onScroll = () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      const p = max > 0 ? window.scrollY / max : 0;
-      let nearest = p;
-      let best = Infinity;
-      for (const s of snaps) {
-        const d = Math.abs(s - p);
-        if (d < best) { best = d; nearest = s; }
-      }
-      const pull = Math.max(0, 1 - best / 0.06);
-      target.current = p * (1 - pull * 0.35) + nearest * (pull * 0.35);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', refresh);
-    refresh();
-    onScroll();
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', refresh);
-    };
-  }, [scroll]);
-
-  useFrame(() => {
-    scroll.current = THREE.MathUtils.lerp(scroll.current, target.current, 0.08);
-  });
-  return null;
 };
 
 const SmoothParallax = ({
@@ -356,6 +299,7 @@ const Scene3DCanvas = ({
   layout,
   theme,
   maxDpr,
+  heroVisible,
 }: {
   scroll: React.MutableRefObject<number>;
   parallax: Vec2Ref;
@@ -363,18 +307,19 @@ const Scene3DCanvas = ({
   layout: SceneLayout;
   theme: SceneTheme;
   maxDpr: number;
+  heroVisible: boolean;
 }) => (
   <Canvas
     camera={{ position: [0, 0.4, layout.cameraZ], fov: layout.fov }}
-    dpr={[1, maxDpr]}
+    frameloop={heroVisible ? 'always' : 'never'}
+    dpr={[Math.min(1, maxDpr), maxDpr]}
     gl={{
-      antialias: maxDpr > 1.1,
+      antialias: false,
       alpha: true,
-      powerPreference: maxDpr > 1.1 ? 'high-performance' : 'low-power',
+      powerPreference: 'low-power',
     }}
   >
     <Suspense fallback={null}>
-      <SmoothScroll scroll={scroll} />
       <SmoothParallax parallax={parallax} targetRef={parallaxTarget} />
       <LayoutRig layout={layout} />
       <Scene scroll={scroll} parallax={parallax} layout={layout} theme={theme} />

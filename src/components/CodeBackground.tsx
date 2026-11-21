@@ -52,9 +52,9 @@ const CodeBackground = () => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
 
-      const colCount = Math.floor(width / 22);
+      const colCount = Math.floor(width / 32);
       columns = Array.from({ length: colCount }).map((_, i) => ({
-        x: i * 22 + Math.random() * 6,
+        x: i * 32 + Math.random() * 6,
         y: Math.random() * height,
         speed: 0.3 + Math.random() * 0.7,
         text:
@@ -71,7 +71,14 @@ const CodeBackground = () => {
     window.addEventListener('resize', init);
 
     let raf = 0;
-    const draw = () => {
+    let lastDraw = 0;
+    const draw = (timestamp = 0) => {
+      if (document.hidden) return;
+      if (!reduced && timestamp - lastDraw < 1000 / 30) {
+        raf = requestAnimationFrame(draw);
+        return;
+      }
+      lastDraw = timestamp;
       ctx.fillStyle = 'rgba(10, 10, 20, 0.09)';
       ctx.fillRect(0, 0, width, height);
 
@@ -84,28 +91,46 @@ const CodeBackground = () => {
         ctx.fillStyle = 'rgba(139, 92, 246, 0.55)';
         ctx.fillText(head, c.x, c.y);
 
-        for (let k = 1; k < 10; k++) {
+        for (let k = 1; k < 7; k++) {
           const ch = c.text[(((idx - k) % c.text.length) + c.text.length) % c.text.length] || '0';
-          const alpha = 0.18 * (1 - k / 10);
+          const alpha = 0.18 * (1 - k / 7);
           ctx.fillStyle = `rgba(14, 165, 233, ${alpha})`;
           ctx.fillText(ch, c.x, c.y - k * fontSize);
         }
 
-        c.y += c.speed * (reduced ? 0 : 1.2);
+        c.y += c.speed * 1.2;
         if (c.y > height + 100) {
           c.y = -Math.random() * 200;
           c.speed = 0.3 + Math.random() * 0.7;
         }
       });
 
-      raf = requestAnimationFrame(draw);
+      if (!reduced) raf = requestAnimationFrame(draw);
     };
 
-    draw();
+    const start = () => {
+      cancelAnimationFrame(raf);
+      lastDraw = 0;
+      if (reduced) draw();
+      else raf = requestAnimationFrame(draw);
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) cancelAnimationFrame(raf);
+      else start();
+    };
+    const onResize = () => {
+      init();
+      start();
+    };
+
+    start();
+    window.addEventListener('resize', onResize);
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener('resize', init);
+      window.removeEventListener('resize', onResize);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, []);
 
